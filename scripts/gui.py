@@ -89,8 +89,8 @@ def main():
 
     root = tk.Tk()
     root.title('RiftBridge Linux')
-    root.geometry('900x790')
-    root.minsize(720, 690)
+    root.geometry('920x920')
+    root.minsize(720, 620)
     root.configure(bg=COLORS['bg'])
     root.option_add('*Font', 'Sans 10')
 
@@ -107,7 +107,7 @@ def main():
     style.configure('CardMuted.TLabel', background=COLORS['panel'], foreground=COLORS['muted'])
     style.configure('Brand.TLabel', font=('Sans', 27, 'bold'), foreground=COLORS['cyan'])
     style.configure('Subtitle.TLabel', font=('Sans', 12), foreground=COLORS['gold'])
-    style.configure('Section.TLabel', font=('Sans', 14, 'bold'))
+    style.configure('Section.TLabel', background=COLORS['panel'], font=('Sans', 14, 'bold'))
     style.configure('CardTitle.TLabel', background=COLORS['panel'], foreground=COLORS['muted'], font=('Sans', 9, 'bold'))
     style.configure('CardValue.TLabel', background=COLORS['panel'], foreground=COLORS['text'], font=('Sans', 12, 'bold'))
     style.configure('Primary.TButton', font=('Sans', 12, 'bold'), padding=(18, 14), background=COLORS['cyan_dark'], foreground=COLORS['text'], borderwidth=1, relief='flat')
@@ -119,8 +119,20 @@ def main():
     style.configure('TCheckbutton', background=COLORS['panel'], foreground=COLORS['muted'])
     style.map('TCheckbutton', background=[('active', COLORS['panel'])])
 
-    page = ttk.Frame(root, padding=(30, 24))
-    page.pack(fill='both', expand=True)
+    viewport = tk.Frame(root, bg=COLORS['bg'])
+    viewport.pack(fill='both', expand=True)
+    canvas = tk.Canvas(viewport, bg=COLORS['bg'], highlightthickness=0, borderwidth=0)
+    scrollbar = ttk.Scrollbar(viewport, orient='vertical', command=canvas.yview)
+    canvas.configure(yscrollcommand=scrollbar.set)
+    canvas.pack(side='left', fill='both', expand=True)
+    scrollbar.pack(side='right', fill='y')
+    page = ttk.Frame(canvas, padding=(30, 24))
+    page_window = canvas.create_window((0, 0), window=page, anchor='nw')
+    page.bind('<Configure>', lambda _event: canvas.configure(scrollregion=canvas.bbox('all')))
+    canvas.bind('<Configure>', lambda event: canvas.itemconfigure(page_window, width=event.width))
+    canvas.bind_all('<MouseWheel>', lambda event: canvas.yview_scroll(int(-event.delta / 120), 'units'))
+    canvas.bind_all('<Button-4>', lambda _event: canvas.yview_scroll(-1, 'units'))
+    canvas.bind_all('<Button-5>', lambda _event: canvas.yview_scroll(1, 'units'))
     page.columnconfigure(0, weight=1)
 
     header = ttk.Frame(page)
@@ -174,6 +186,8 @@ def main():
             advanced.pack_forget()
 
     ttk.Checkbutton(advanced_row, text='Mostrar opções avançadas', variable=show_advanced, command=toggle_advanced).pack(anchor='w')
+    show_advanced.set(False)
+    advanced.pack_forget()
 
     steps = ttk.Frame(page, style='Card.TFrame', padding=(20, 16))
     steps.grid(row=3, column=0, sticky='ew', pady=(14, 0))
@@ -261,6 +275,7 @@ def main():
         except OSError as exc:
             dialog.showerror('Não foi possível abrir o guia', str(exc))
 
+    root.after_idle(lambda: canvas.yview_moveto(0.0))
     monitor_terminals()
     root.mainloop()
     return 0
