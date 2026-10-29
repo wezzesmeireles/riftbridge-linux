@@ -17,7 +17,24 @@ substitui um teste completo de instalação.
 - Rede estável. O tempo de compilação depende do processador e da RAM.
 - Conta secundária se decidir assumir os riscos. Não é uma solução oficial da Riot.
 
-## Caminho comum entre distros: Nix
+## Comece com um comando
+
+Depois de baixar e extrair o repositório, execute `./install.sh` em um terminal.
+O script prepara Python se necessário, escolhe o ambiente e apresenta as etapas.
+Você só confirma a instalação de pacotes e os prompts do runtime. O padrão é Brasil.
+
+- Nix já instalado: usa o ambiente Nix.
+- Sem Nix: prepara dependências nativas em Fedora, Debian/Ubuntu/Mint ou Arch/derivadas.
+- Distro desconhecida ou Fedora imutável: interrompe com orientação; não modifica o host por suposição.
+- `./install.sh --dry-run`: mostra os comandos. Não instala pacotes quando Python já está disponível.
+
+A lista de pacotes segue as dependências oficiais do Darling, ajustadas para build
+x86_64. A disponibilidade dos pacotes do Fedora foi consultada nesta máquina;
+Debian e Arch não tiveram instalação completa validada. O gerenciador sempre pode
+interromper por pacote indisponível ou configuração de repositórios. Não há `-y`,
+`--noconfirm`, desativação de SELinux ou execução de instaladores remotos.
+
+## Caminho comum entre distros: Nix (opcional)
 
 Fedora, Ubuntu, Debian, Mint, Arch, EndeavourOS, Manjaro e openSUSE podem usar
 Nix sem trocar de distro. Isso descreve um caminho de dependências, não uma
@@ -37,7 +54,7 @@ Instale apenas o necessário para obter este repositório, se estiver faltando:
 | Outras | Instale Git/Python pelo gerenciador da distro e confirme se Nix a suporta |
 
 Esses comandos **não** instalam todas as dependências do build nativo. O backend
-Nix é o caminho comum. Alpine/musl, ARM e sistemas imutáveis não foram validados;
+Nix é uma alternativa, não uma exigência para as famílias com preparação nativa. Alpine/musl, ARM e sistemas imutáveis não foram validados;
 não tente resolver isso executando o instalador inteiro como root.
 
 Depois de instalar Nix e abrir um novo terminal:
@@ -48,7 +65,7 @@ cd riftbridge-linux
 ./install.sh --region br
 ```
 
-O comando imprime o plano, inicia o fluxo upstream e mantém os prompts visíveis.
+O comando imprime o plano, escolhe o backend disponível e inicia o fluxo upstream e mantém os prompts visíveis.
 No prompt de região, Enter aceita `br`. O download do LoL é feito pelo cliente
 Riot; o repositório não distribui o jogo, contas ou tokens. Depois:
 
@@ -58,10 +75,11 @@ Riot; o repositório não distribui o jogo, contas ou tokens. Depois:
 
 ## Build nativo sem Nix
 
-Este modo exige todas as dependências de desenvolvimento do Darling previamente
-instaladas. Use a [documentação de build do Darling](https://docs.darlinghq.org/build-instructions.html)
+Este modo prepara as dependências das famílias reconhecidas antes do build. Para
+um ambiente já preparado, use `--skip-deps`. Consulte a [documentação de build do Darling](https://docs.darlinghq.org/build-instructions.html)
 e os [detalhes do runtime](SETUP.md). Nomes de pacotes variam entre versões:
-o script não tenta instalar pacotes desconhecidos nem habilitar repositórios extras.
+o script usa listas por família e não habilita repositórios extras. Se algum pacote
+não estiver disponível, interrompe sem iniciar o build.
 
 ```bash
 ./install.sh --backend native --region br --jobs 2 --dry-run
@@ -114,12 +132,13 @@ política da Riot e não remove avisos sobre software de terceiros.
 
 ## Interface gráfica
 
-Execute `./riftbridge.sh`. Selecione Nix ou native e a região; use **Instalar**,
+Execute `./riftbridge.sh`. O modo padrão é auto; as opções avançadas permitem escolher Nix ou native. Escolha a região e use **Instalar**,
 **Abrir Riot / LoL**, **Diagnosticar** ou **Ver comandos sem instalar**. Cada ação
 abre um terminal: a janela não simula progresso e não esconde prompts do sudo.
 A GUI não é um novo backend e não remove as limitações descritas acima.
 
-Se Tkinter estiver ausente: Fedora `sudo dnf install python3-tkinter`; Debian/Ubuntu
+Sem Tkinter, o assistente abre no terminal e prepara as dependências. Para instalar
+somente a interface: Fedora `sudo dnf install python3-tkinter`; Debian/Ubuntu
 `sudo apt install python3-tk`; Arch `sudo pacman -S tk`; openSUSE
 `sudo zypper install python3-tk`. Alternativa sem Tkinter: `./install.sh`.
 

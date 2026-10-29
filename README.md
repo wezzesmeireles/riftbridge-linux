@@ -20,11 +20,12 @@ cd riftbridge-linux
 
 ![Interface gráfica do RiftBridge](docs/assets/riftbridge-interface.png)
 
-Para a interface com botões: `./riftbridge.sh` (requer Tkinter). A instalação abre um terminal para mostrar prompts e erros.
+Para a interface com botões: `./riftbridge.sh`. Escolha a região e clique em **Instalar**. Se Tkinter estiver ausente, o assistente abre no terminal.
 
-O caminho padrão usa **Nix**, que precisa estar instalado antes. Não é necessário
-usar NixOS. Nix fornece dependências, mas o Darling ainda será compilado: não é um
-instalador instantâneo nem um pacote binário pronto. Veja o
+O modo **auto** usa Nix se ele já estiver instalado. Sem Nix, prepara as dependências
+nativas em Fedora, Debian/Ubuntu/Mint e Arch/derivadas, pedindo a confirmação normal
+do gerenciador de pacotes. Depois compila e instala o runtime. Não é um pacote
+binário pronto nem uma instalação instantânea. Veja o
 [guia completo por distro](docs/INSTALACAO-FACIL.md).
 
 Prévia sem instalar nada:
@@ -33,7 +34,7 @@ Prévia sem instalar nada:
 ./install.sh --dry-run
 ```
 
-Build nativo, com as dependências já instaladas:
+Modo nativo explícito (também prepara as dependências):
 
 ```bash
 ./install.sh --backend native --region br --jobs 2

@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 
 def command(action,backend,region):
-    if action not in ('install','run','doctor') or backend not in ('nix','native'):
+    if action not in ('install','run','doctor') or backend not in ('auto','nix','native'):
         raise ValueError('Invalid action or backend')
     if region not in ('br','euw','eune','na','kr','jp','la1','la2','oc1','ru','tr'):
         raise ValueError('Invalid region')
@@ -29,7 +29,7 @@ def in_terminal(cmd):
 def main():
     parser=argparse.ArgumentParser(description='RiftBridge Linux — interface de instalação')
     parser.add_argument('--print-command',choices=('install','run','doctor'))
-    parser.add_argument('--backend',choices=('nix','native'),default='nix')
+    parser.add_argument('--backend',choices=('auto','nix','native'),default='auto')
     parser.add_argument('--region',default='br')
     args=parser.parse_args()
     if args.print_command:
@@ -39,7 +39,9 @@ def main():
         from tkinter import ttk,messagebox
     except ImportError:
         print('Tkinter não instalado. Fedora: sudo dnf install python3-tkinter; Ubuntu/Debian: sudo apt install python3-tk; Arch: sudo pacman -S tk; openSUSE: sudo zypper install python3-tk. Ou use ./install.sh.',file=sys.stderr)
-        return 1
+        # The installation wizard works without Tkinter and can install it through distro packages.
+        try:return subprocess.call(in_terminal(command('install',args.backend,args.region)),cwd=ROOT)
+        except (OSError,RuntimeError) as exc:print(str(exc),file=sys.stderr);return 1
     root=tk.Tk();root.title('RiftBridge Linux');root.geometry('760x650');root.minsize(680,630)
     root.configure(bg='#101b29')
     style=ttk.Style();style.theme_use('clam')
@@ -51,14 +53,20 @@ def main():
     frame=ttk.Frame(root,padding=28);frame.pack(fill='both',expand=True)
     ttk.Label(frame,text='RiftBridge Linux',style='Title.TLabel').pack(anchor='w')
     ttk.Label(frame,text='League of Legends no Linux via Darling',style='Sub.TLabel').pack(anchor='w',pady=(4,20))
-    ttk.Label(frame,text='Escolha o ambiente e abra a etapa desejada em um terminal.\nOs prompts e erros ficam visíveis; a compilação pode demorar.',wraplength=680).pack(anchor='w')
+    ttk.Label(frame,text='Escolha a região e clique em Instalar. O modo auto escolhe o ambiente.\nOs prompts e erros ficam visíveis; a compilação pode demorar.',wraplength=680).pack(anchor='w')
     opts=ttk.Frame(frame);opts.pack(fill='x',pady=18)
     backend=tk.StringVar(value=args.backend);region=tk.StringVar(value=args.region)
-    ttk.Label(opts,text='Ambiente').grid(row=0,column=0,sticky='w')
-    ttk.Combobox(opts,textvariable=backend,values=('nix','native'),state='readonly',width=18).grid(row=1,column=0,padx=(0,20))
-    ttk.Label(opts,text='Região').grid(row=0,column=1,sticky='w')
-    ttk.Combobox(opts,textvariable=region,values=('br','euw','eune','na','kr','jp','la1','la2','oc1','ru','tr'),state='readonly',width=10).grid(row=1,column=1)
-    status=tk.StringVar(value='Pronto. Nix precisa estar instalado; native exige as dependências do Darling.')
+    ttk.Label(opts,text='Região').pack(side='left',padx=(0,10))
+    ttk.Combobox(opts,textvariable=region,values=('br','euw','eune','na','kr','jp','la1','la2','oc1','ru','tr'),state='readonly',width=10).pack(side='left')
+    advanced=ttk.Frame(frame)
+    ttk.Label(advanced,text='Modo de instalação').pack(side='left',padx=(0,10))
+    ttk.Combobox(advanced,textvariable=backend,values=('auto','nix','native'),state='readonly',width=18).pack(side='left')
+    show_advanced=tk.BooleanVar(value=False)
+    def toggle_advanced():
+        if show_advanced.get():advanced.pack(fill='x',after=opts,pady=8)
+        else:advanced.pack_forget()
+    ttk.Checkbutton(opts,text='Opções avançadas',variable=show_advanced,command=toggle_advanced).pack(side='right')
+    status=tk.StringVar(value='Pronto. O modo auto prepara dependências nas distros reconhecidas.')
     buttons=ttk.Frame(frame);buttons.pack(fill='x',pady=8)
     children={}
     def start(action,preview=False):
