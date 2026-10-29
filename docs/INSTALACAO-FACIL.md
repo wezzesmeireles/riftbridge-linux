@@ -102,7 +102,7 @@ Preserve o `.app` atual e os metadados antes de qualquer substituição. O jogo 
 binários da Riot não devem ser adicionados ao fork.
 
 As alterações experimentais locais feitas ao tentar portar Electron 43 não estão
-neste fork: não foram necessárias para demonstrar uma instalação limpa e não têm
+neste fork: não foram validadas em uma instalação limpa e não têm
 validação suficiente para distribuição como correção universal.
 
 ## Escopo dos atalhos

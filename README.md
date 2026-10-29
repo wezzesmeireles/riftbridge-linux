@@ -129,7 +129,7 @@ See [Nix setup and operational limits](docs/SETUP.md#nixos-package).
 
 ```sh
 git clone https://github.com/lucannez64/darling-lol.git
-cd riftbridge-linux
+cd darling-lol
 python3 -m venv build/venv
 build/venv/bin/pip install -r requirements.txt
 python3 scripts/configure.py --guest-user "$USER"
