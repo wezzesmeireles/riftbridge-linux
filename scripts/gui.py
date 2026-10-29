@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Friendly desktop front end; installation prompts stay in a real terminal."""
+"""Compact desktop front end; privileged prompts stay in a real terminal."""
 import argparse
 import shlex
 import shutil
@@ -21,9 +21,8 @@ REGIONS = {
 }
 COLORS = {
     'bg': '#0b1220', 'panel': '#121e30', 'panel_alt': '#17263a',
-    'edge': '#263a50', 'text': '#edf4fb', 'muted': '#9aadc2',
-    'cyan': '#61d9dc', 'cyan_dark': '#163f4d', 'gold': '#d6b36d',
-    'green': '#83d6a8', 'red': '#f0a18f',
+    'text': '#edf4fb', 'muted': '#9aadc2', 'cyan': '#61d9dc',
+    'cyan_dark': '#164958', 'gold': '#d6b36d', 'green': '#83d6a8',
 }
 
 
@@ -45,25 +44,19 @@ def in_terminal(cmd):
         path = shutil.which(binary)
         if path:
             return [path, *flags, *cmd]
-    raise RuntimeError('Não encontrei um terminal compatível. Instale Konsole, GNOME Terminal, xfce4-terminal ou xterm.')
+    raise RuntimeError('Não encontrei terminal compatível: Konsole, GNOME Terminal, xfce4-terminal ou xterm.')
 
 
-def environment_cards():
-    """Return honest, read-only environment hints for the dashboard."""
+def environment_summary():
     family = dependencies.family()
-    distro = easy.distro()
     if shutil.which('nix'):
-        backend = 'Nix instalado'
-        backend_note = 'O modo automático usará Nix'
+        route = 'auto · Nix'
     elif family:
-        backend = 'Instalação nativa'
-        backend_note = 'Dependências serão preparadas com confirmação'
+        route = 'auto · nativo'
     else:
-        backend = 'Precisa de configuração'
-        backend_note = 'Use Nix ou configure dependências manualmente'
-    darling = shutil.which('darling')
-    runtime = 'Darling encontrado' if darling else 'Será preparado na instalação'
-    return (distro, backend, backend_note, runtime)
+        route = 'auto · requer configuração'
+    runtime = 'Darling disponível' if shutil.which('darling') else 'Darling será preparado'
+    return easy.distro(), route, runtime
 
 
 def main():
@@ -89,8 +82,8 @@ def main():
 
     root = tk.Tk()
     root.title('RiftBridge Linux')
-    root.geometry('920x920')
-    root.minsize(720, 620)
+    root.geometry('720x610')
+    root.minsize(600, 520)
     root.configure(bg=COLORS['bg'])
     root.option_add('*Font', 'Sans 10')
 
@@ -98,160 +91,117 @@ def main():
     style.theme_use('clam')
     style.configure('.', background=COLORS['bg'], foreground=COLORS['text'], font=('Sans', 10))
     style.configure('TFrame', background=COLORS['bg'])
-    style.configure('Card.TFrame', background=COLORS['panel'])
+    style.configure('Panel.TFrame', background=COLORS['panel'])
     style.configure('Inset.TFrame', background=COLORS['panel_alt'])
     style.configure('TLabel', background=COLORS['bg'], foreground=COLORS['text'])
-    style.configure('Card.TLabel', background=COLORS['panel'], foreground=COLORS['text'])
+    style.configure('Muted.TLabel', background=COLORS['bg'], foreground=COLORS['muted'])
+    style.configure('Panel.TLabel', background=COLORS['panel'], foreground=COLORS['text'])
+    style.configure('PanelMuted.TLabel', background=COLORS['panel'], foreground=COLORS['muted'])
     style.configure('Inset.TLabel', background=COLORS['panel_alt'], foreground=COLORS['text'])
-    style.configure('Muted.TLabel', foreground=COLORS['muted'])
-    style.configure('CardMuted.TLabel', background=COLORS['panel'], foreground=COLORS['muted'])
-    style.configure('Brand.TLabel', font=('Sans', 27, 'bold'), foreground=COLORS['cyan'])
-    style.configure('Subtitle.TLabel', font=('Sans', 12), foreground=COLORS['gold'])
-    style.configure('Section.TLabel', background=COLORS['panel'], font=('Sans', 14, 'bold'))
-    style.configure('CardTitle.TLabel', background=COLORS['panel'], foreground=COLORS['muted'], font=('Sans', 9, 'bold'))
-    style.configure('CardValue.TLabel', background=COLORS['panel'], foreground=COLORS['text'], font=('Sans', 12, 'bold'))
-    style.configure('Primary.TButton', font=('Sans', 12, 'bold'), padding=(18, 14), background=COLORS['cyan_dark'], foreground=COLORS['text'], borderwidth=1, relief='flat')
-    style.map('Primary.TButton', background=[('active', '#20586a'), ('disabled', '#263546')], foreground=[('disabled', '#7f91a4')])
-    style.configure('Action.TButton', font=('Sans', 10, 'bold'), padding=(12, 11), background=COLORS['panel_alt'], foreground=COLORS['text'], borderwidth=0, relief='flat')
+    style.configure('Brand.TLabel', background=COLORS['bg'], foreground=COLORS['cyan'], font=('Sans', 23, 'bold'))
+    style.configure('Eyebrow.TLabel', background=COLORS['bg'], foreground=COLORS['gold'], font=('Sans', 9, 'bold'))
+    style.configure('PanelEyebrow.TLabel', background=COLORS['panel'], foreground=COLORS['gold'], font=('Sans', 9, 'bold'))
+    style.configure('Primary.TButton', font=('Sans', 13, 'bold'), padding=(16, 13), background=COLORS['cyan_dark'], foreground=COLORS['text'], borderwidth=0, relief='flat')
+    style.map('Primary.TButton', background=[('active', '#206174'), ('disabled', '#263546')])
+    style.configure('Action.TButton', font=('Sans', 10, 'bold'), padding=(11, 9), background=COLORS['panel_alt'], foreground=COLORS['text'], borderwidth=0, relief='flat')
     style.map('Action.TButton', background=[('active', '#243a52')])
-    style.configure('TCombobox', padding=7, fieldbackground=COLORS['panel_alt'], background=COLORS['panel_alt'], foreground=COLORS['text'], arrowcolor=COLORS['cyan'])
+    style.configure('TCombobox', padding=6, fieldbackground=COLORS['panel_alt'], background=COLORS['panel_alt'], foreground=COLORS['text'], arrowcolor=COLORS['cyan'])
     style.map('TCombobox', fieldbackground=[('readonly', COLORS['panel_alt'])], foreground=[('readonly', COLORS['text'])])
     style.configure('TCheckbutton', background=COLORS['panel'], foreground=COLORS['muted'])
     style.map('TCheckbutton', background=[('active', COLORS['panel'])])
 
-    viewport = tk.Frame(root, bg=COLORS['bg'])
-    viewport.pack(fill='both', expand=True)
-    canvas = tk.Canvas(viewport, bg=COLORS['bg'], highlightthickness=0, borderwidth=0)
-    scrollbar = ttk.Scrollbar(viewport, orient='vertical', command=canvas.yview)
-    canvas.configure(yscrollcommand=scrollbar.set)
-    canvas.pack(side='left', fill='both', expand=True)
-    scrollbar.pack(side='right', fill='y')
-    page = ttk.Frame(canvas, padding=(30, 24))
-    page_window = canvas.create_window((0, 0), window=page, anchor='nw')
-    page.bind('<Configure>', lambda _event: canvas.configure(scrollregion=canvas.bbox('all')))
-    canvas.bind('<Configure>', lambda event: canvas.itemconfigure(page_window, width=event.width))
-    canvas.bind_all('<MouseWheel>', lambda event: canvas.yview_scroll(int(-event.delta / 120), 'units'))
-    canvas.bind_all('<Button-4>', lambda _event: canvas.yview_scroll(-1, 'units'))
-    canvas.bind_all('<Button-5>', lambda _event: canvas.yview_scroll(1, 'units'))
-    page.columnconfigure(0, weight=1)
+    page = ttk.Frame(root, padding=(24, 18))
+    page.pack(fill='both', expand=True)
 
     header = ttk.Frame(page)
-    header.grid(row=0, column=0, sticky='ew')
+    header.pack(fill='x')
     ttk.Label(header, text='RiftBridge', style='Brand.TLabel').pack(anchor='w')
-    ttk.Label(header, text='LEAGUE OF LEGENDS  ·  LINUX VIA DARLING', style='Subtitle.TLabel').pack(anchor='w', pady=(2, 0))
-    ttk.Label(header, text='Assistente comunitário para preparar, abrir e diagnosticar o cliente.', style='Muted.TLabel').pack(anchor='w', pady=(9, 0))
+    ttk.Label(header, text='LEAGUE OF LEGENDS  ·  LINUX VIA DARLING', style='Eyebrow.TLabel').pack(anchor='w', pady=(1, 0))
+    ttk.Label(header, text='Instale e abra pelo modo automático.', style='Muted.TLabel').pack(anchor='w', pady=(5, 0))
 
-    distro, backend_label, backend_note, runtime_label = environment_cards()
-    cards = ttk.Frame(page)
-    cards.grid(row=1, column=0, sticky='ew', pady=(20, 18))
-    for col in range(3):
-        cards.columnconfigure(col, weight=1, uniform='cards')
-    for col, (title, value, note) in enumerate((
-        ('SISTEMA DETECTADO', distro, 'Linux x86_64'),
-        ('MODO AUTOMÁTICO', backend_label, backend_note),
-        ('RUNTIME', runtime_label, 'Estado informativo; sem alterações'),
-    )):
-        card = ttk.Frame(cards, style='Card.TFrame', padding=(15, 13))
-        card.grid(row=0, column=col, sticky='nsew', padx=(0 if col == 0 else 7, 0 if col == 2 else 7))
-        ttk.Label(card, text=title, style='CardTitle.TLabel').pack(anchor='w')
-        ttk.Label(card, text=value, style='CardValue.TLabel', wraplength=220).pack(anchor='w', pady=(8, 4))
-        ttk.Label(card, text=note, style='CardMuted.TLabel', wraplength=220).pack(anchor='w')
+    distro, route, runtime = environment_summary()
+    status_pill = ttk.Frame(page, style='Inset.TFrame', padding=(11, 8))
+    status_pill.pack(fill='x', pady=(13, 13))
+    ttk.Label(status_pill, text=f'{distro}   ·   {route}   ·   {runtime}', style='Inset.TLabel', wraplength=650).pack(anchor='w')
 
-    setup = ttk.Frame(page, style='Card.TFrame', padding=(20, 18))
-    setup.grid(row=2, column=0, sticky='ew')
-    setup.columnconfigure(0, weight=1)
-    ttk.Label(setup, text='Comece por aqui', style='Section.TLabel').pack(anchor='w')
-    ttk.Label(setup, text='A instalação guiada escolhe o caminho adequado e mostra cada confirmação no terminal.', style='CardMuted.TLabel', wraplength=780).pack(anchor='w', pady=(5, 13))
+    install_card = ttk.Frame(page, style='Panel.TFrame', padding=(17, 15))
+    install_card.pack(fill='x')
+    ttk.Label(install_card, text='PRONTO PARA JOGAR?', style='PanelEyebrow.TLabel').pack(anchor='w')
+    ttk.Label(install_card, text='Comece com um clique', style='Panel.TLabel', font=('Sans', 17, 'bold')).pack(anchor='w', pady=(4, 1))
+    ttk.Label(install_card, text='A instalação abre no terminal para você confirmar pacotes e permissões.', style='PanelMuted.TLabel', wraplength=630).pack(anchor='w', pady=(0, 12))
 
-    settings = ttk.Frame(setup, style='Card.TFrame')
-    settings.pack(fill='x')
-    ttk.Label(settings, text='Região do servidor', style='Card.TLabel').pack(side='left', padx=(0, 12))
+    options = ttk.Frame(install_card, style='Panel.TFrame')
+    options.pack(fill='x', pady=(0, 11))
+    ttk.Label(options, text='Servidor', style='Panel.TLabel').pack(side='left', padx=(0, 10))
     selected_region = next((label for label, code in REGIONS.items() if code == args.region), 'Brasil (BR)')
     region = tk.StringVar(value=selected_region)
-    ttk.Combobox(settings, textvariable=region, values=tuple(REGIONS), state='readonly', width=27).pack(side='left')
+    ttk.Combobox(options, textvariable=region, values=tuple(REGIONS), state='readonly', width=22).pack(side='left')
 
-    advanced_row = ttk.Frame(setup, style='Card.TFrame')
-    advanced_row.pack(fill='x', pady=(10, 0))
-    show_advanced = tk.BooleanVar(value=False)
-    advanced = ttk.Frame(setup, style='Inset.TFrame', padding=(12, 10))
+    advanced_visible = tk.BooleanVar(value=False)
     backend = tk.StringVar(value=args.backend)
-    ttk.Label(advanced, text='Forçar modo', style='Inset.TLabel').pack(side='left', padx=(0, 12))
-    ttk.Combobox(advanced, textvariable=backend, values=('auto', 'nix', 'native'), state='readonly', width=14).pack(side='left')
-    ttk.Label(advanced, text='Auto é recomendado para a maioria das pessoas.', style='Inset.TLabel').pack(side='left', padx=(12, 0))
+    advanced = ttk.Frame(install_card, style='Panel.TFrame')
+    ttk.Label(advanced, text='Modo', style='Panel.TLabel').pack(side='left', padx=(0, 10))
+    ttk.Combobox(advanced, textvariable=backend, values=('auto', 'nix', 'native'), state='readonly', width=12).pack(side='left')
 
     def toggle_advanced():
-        if show_advanced.get():
-            advanced.pack(fill='x', pady=(10, 0))
+        if advanced_visible.get():
+            advanced.pack(fill='x', pady=(0, 10))
         else:
             advanced.pack_forget()
 
-    ttk.Checkbutton(advanced_row, text='Mostrar opções avançadas', variable=show_advanced, command=toggle_advanced).pack(anchor='w')
-    show_advanced.set(False)
-    advanced.pack_forget()
+    ttk.Checkbutton(options, text='Avançado', variable=advanced_visible, command=toggle_advanced).pack(side='right')
 
-    steps = ttk.Frame(page, style='Card.TFrame', padding=(20, 16))
-    steps.grid(row=3, column=0, sticky='ew', pady=(14, 0))
-    ttk.Label(steps, text='O que vai acontecer', style='Section.TLabel').pack(anchor='w', pady=(0, 11))
-    for number, title, detail in (
-        ('1', 'Preparar o ambiente', 'Detecta sua distro e instala dependências após sua confirmação.'),
-        ('2', 'Compilar e configurar', 'Constrói o Darling e configura o cliente no seu usuário.'),
-        ('3', 'Abrir o cliente', 'Depois da instalação, use Abrir Riot / LoL para iniciar.'),
-    ):
-        line = ttk.Frame(steps, style='Card.TFrame')
-        line.pack(fill='x', pady=4)
-        badge = tk.Label(line, text=number, bg=COLORS['cyan_dark'], fg=COLORS['cyan'], font=('Sans', 10, 'bold'), width=3, height=1, padx=3, pady=4)
-        badge.pack(side='left', padx=(0, 11))
-        textcol = ttk.Frame(line, style='Card.TFrame')
-        textcol.pack(side='left', fill='x', expand=True)
-        ttk.Label(textcol, text=title, style='Card.TLabel', font=('Sans', 10, 'bold')).pack(anchor='w')
-        ttk.Label(textcol, text=detail, style='CardMuted.TLabel', wraplength=720).pack(anchor='w', pady=(2, 0))
-
-    status_card = ttk.Frame(page, style='Inset.TFrame', padding=(14, 11))
-    status_card.grid(row=4, column=0, sticky='ew', pady=(14, 9))
-    status_card.columnconfigure(0, weight=1)
-    status = tk.StringVar(value='Pronto para começar · modo automático · região Brasil')
-    ttk.Label(status_card, text='STATUS', style='Inset.TLabel', foreground=COLORS['cyan'], font=('Sans', 8, 'bold')).grid(row=0, column=0, sticky='w')
-    ttk.Label(status_card, textvariable=status, style='Inset.TLabel', wraplength=780).grid(row=1, column=0, sticky='w', pady=(3, 0))
-
-    button_area = ttk.Frame(page)
-    button_area.grid(row=5, column=0, sticky='ew')
-    button_area.columnconfigure(0, weight=2)
-    button_area.columnconfigure(1, weight=1)
-    button_area.columnconfigure(2, weight=1)
+    state = tk.StringVar(value='Pronto · Brasil · instalação automática')
     children = {}
-    primary = ttk.Button(button_area, text='Instalar RiftBridge', style='Primary.TButton')
-    primary.grid(row=0, column=0, sticky='ew', padx=(0, 8))
+    action_labels = {'install': 'instalação', 'run': 'abertura do cliente', 'doctor': 'diagnóstico'}
 
     def start(action, preview=False):
         try:
             old = children.get(action)
             if old is not None and old.poll() is None:
-                status.set('Essa ação já está aberta. Confira o terminal que iniciou.')
+                state.set('Esta ação já está aberta. Acompanhe o terminal iniciado.')
                 return
             code = REGIONS.get(region.get())
             cmd = command(action, backend.get(), code)
             if preview:
                 cmd.append('--dry-run')
-            terminal_cmd = ['python3', str(ROOT / 'scripts/terminal-task.py'), *cmd[2:]]
-            proc = subprocess.Popen(in_terminal(terminal_cmd), cwd=ROOT, start_new_session=True)
-            children[action] = proc
-            status.set(f'Em andamento: {action_labels[action]}. Acompanhe os detalhes e confirmações no terminal.')
+            terminal = ['python3', str(ROOT / 'scripts/terminal-task.py'), *cmd[2:]]
+            children[action] = subprocess.Popen(in_terminal(terminal), cwd=ROOT, start_new_session=True)
+            state.set(f'{action_labels[action].capitalize()} em andamento · confira o terminal para confirmações e detalhes.')
         except (OSError, RuntimeError, ValueError) as exc:
             messagebox.showerror('Não foi possível iniciar', str(exc))
-            status.set('Não foi possível abrir o terminal. Veja a mensagem para corrigir.')
+            state.set('Não foi possível iniciar. Confira a mensagem exibida.')
 
-    action_labels = {'install': 'instalação', 'run': 'abertura do cliente', 'doctor': 'diagnóstico'}
-    primary.configure(command=lambda: start('install'))
-    ttk.Button(button_area, text='Abrir Riot / LoL', style='Action.TButton', command=lambda: start('run')).grid(row=0, column=1, sticky='ew', padx=4)
-    ttk.Button(button_area, text='Diagnosticar', style='Action.TButton', command=lambda: start('doctor')).grid(row=0, column=2, sticky='ew', padx=(8, 0))
+    ttk.Button(install_card, text='Instalar RiftBridge', style='Primary.TButton', command=lambda: start('install')).pack(fill='x')
+    ttk.Label(install_card, text='O modo automático escolhe Nix ou prepara as dependências da distro.', style='PanelMuted.TLabel', wraplength=630).pack(anchor='w', pady=(8, 0))
 
-    secondary = ttk.Frame(page)
-    secondary.grid(row=6, column=0, sticky='ew', pady=(8, 0))
-    ttk.Button(secondary, text='Prévia dos comandos', style='Action.TButton', command=lambda: start('install', True)).pack(side='left')
-    ttk.Button(secondary, text='Abrir guia de instalação', style='Action.TButton', command=lambda: open_guide(messagebox)).pack(side='left', padx=8)
+    actions = ttk.Frame(page)
+    actions.pack(fill='x', pady=(12, 0))
+    actions.columnconfigure((0, 1), weight=1, uniform='actions')
+    ttk.Button(actions, text='Abrir Riot / LoL', style='Action.TButton', command=lambda: start('run')).grid(row=0, column=0, sticky='ew', padx=(0, 5))
+    ttk.Button(actions, text='Diagnosticar', style='Action.TButton', command=lambda: start('doctor')).grid(row=0, column=1, sticky='ew', padx=(5, 0))
 
-    risk = ttk.Label(page, text='Projeto comunitário experimental e sem vínculo com a Riot. A Riot pode restringir o acesso a clientes não oficiais; não há garantia de funcionamento ou de ausência de suspensão.', style='Muted.TLabel', wraplength=810, justify='left')
-    risk.grid(row=7, column=0, sticky='ew', pady=(12, 0))
+    links = ttk.Frame(page)
+    links.pack(fill='x', pady=(6, 0))
+    ttk.Button(links, text='Prévia', style='Action.TButton', command=lambda: start('install', True)).pack(side='left')
+
+    def open_guide():
+        guide = ROOT / 'docs/INSTALACAO-FACIL.md'
+        opener = shutil.which('xdg-open')
+        try:
+            if opener:
+                subprocess.Popen([opener, str(guide)], cwd=ROOT)
+            else:
+                messagebox.showinfo('Guia de instalação', str(guide))
+        except OSError as exc:
+            messagebox.showerror('Não foi possível abrir o guia', str(exc))
+
+    ttk.Button(links, text='Guia', style='Action.TButton', command=open_guide).pack(side='left', padx=(6, 0))
+
+    status_line = ttk.Frame(page, style='Inset.TFrame', padding=(10, 8))
+    status_line.pack(fill='x', pady=(10, 7))
+    ttk.Label(status_line, textvariable=state, style='Inset.TLabel', wraplength=640).pack(anchor='w')
+    ttk.Label(page, text='Experimental · sem vínculo com a Riot. Clientes não oficiais podem levar a restrições de conta.', style='Muted.TLabel', wraplength=660, justify='left', font=('Sans', 8)).pack(anchor='w')
 
     def monitor_terminals():
         for action, proc in tuple(children.items()):
@@ -259,23 +209,11 @@ def main():
             if result is not None:
                 del children[action]
                 if result == 0:
-                    status.set(f'{action_labels[action].capitalize()} encerrada. O terminal mostra o resultado final.')
+                    state.set(f'{action_labels[action].capitalize()} concluída · o terminal mostra o resultado final.')
                 else:
-                    status.set(f'{action_labels[action].capitalize()} terminou com erro. Veja a etapa indicada no terminal e tente novamente após corrigir.')
+                    state.set(f'{action_labels[action].capitalize()} terminou com erro · veja a etapa no terminal.')
         root.after(900, monitor_terminals)
 
-    def open_guide(dialog):
-        guide = ROOT / 'docs/INSTALACAO-FACIL.md'
-        opener = shutil.which('xdg-open')
-        try:
-            if opener:
-                subprocess.Popen([opener, str(guide)], cwd=ROOT)
-            else:
-                dialog.showinfo('Guia de instalação', str(guide))
-        except OSError as exc:
-            dialog.showerror('Não foi possível abrir o guia', str(exc))
-
-    root.after_idle(lambda: canvas.yview_moveto(0.0))
     monitor_terminals()
     root.mainloop()
     return 0

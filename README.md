@@ -20,11 +20,10 @@ cd riftbridge-linux
 
 ![Interface gráfica do RiftBridge](docs/assets/riftbridge-interface.png)
 
-Para a interface gráfica: `./riftbridge.sh`. Ela identifica a distro, mostra o caminho automático,
-permite escolher a região e explica as três etapas antes de iniciar. **Instalar RiftBridge**
-é a ação principal; abrir o cliente, diagnosticar e ver a prévia ficam disponíveis na mesma tela.
-As confirmações continuam visíveis no terminal. Se Tkinter estiver ausente, use `./install.sh`
-ou instale Tkinter pelo gerenciador da sua distro.
+Para a interface gráfica compacta: `./riftbridge.sh`. A região Brasil já vem selecionada;
+clique em **Instalar RiftBridge** para iniciar o fluxo automático. A tela também mostra o
+sistema detectado e oferece abrir o cliente ou diagnosticar. Confirmações de pacotes e permissões
+aparecem no terminal. Se Tkinter estiver ausente, use `./install.sh` ou instale Tkinter pela distro.
 
 O modo **auto** usa Nix se ele já estiver instalado. Sem Nix, prepara as dependências
 nativas em Fedora, Debian/Ubuntu/Mint e Arch/derivadas, pedindo a confirmação normal

@@ -132,12 +132,11 @@ política da Riot e não remove avisos sobre software de terceiros.
 
 ## Interface gráfica
 
-Execute `./riftbridge.sh`. A tela mostra a distro reconhecida, a escolha prevista pelo
-modo automático e um resumo do Darling encontrado no PATH. Escolha a região e use
-**Instalar RiftBridge** para iniciar o fluxo principal. **Abrir Riot / LoL**,
-**Diagnosticar** e **Prévia dos comandos** ficam na mesma tela; Nix/native só aparecem
-ao abrir as opções avançadas. Cada ação abre um terminal e o painel indica quando
-ela terminou. Os prompts do sudo permanecem visíveis nesse terminal.
+Execute `./riftbridge.sh` para abrir a interface compacta. A região Brasil já vem
+selecionada; **Instalar RiftBridge** inicia o fluxo automático em um clique. O clique
+inicia o assistente: confirmações do gerenciador de pacotes e permissões continuam no
+terminal. A tela mostra a distro e o caminho previsto, com opções para abrir o cliente,
+diagnosticar ou ver uma prévia. Nix/native ficam nas opções avançadas.
 
 A tela de status descreve apenas o que foi detectado no sistema; não valida o driver,
 a instalação do jogo ou a compatibilidade da conta. A interface não é um novo backend
