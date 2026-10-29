@@ -1,3 +1,54 @@
+# RiftBridge Linux
+
+**League of Legends no Linux via Darling**
+
+![RiftBridge Linux](docs/assets/riftbridge-hero.png)
+
+Fork de [lucannez64/darling-lol](https://github.com/lucannez64/darling-lol).
+Interface gráfica e comandos curtos para instalar, abrir e diagnosticar. O runtime continua
+experimental; não há promessa de execução em todas as distros nem aprovação da Riot.
+
+**Há relatos de suspensão por software de terceiros, inclusive sem jogar.**
+A abertura da tela de login não comprova que partidas funcionam ou que a conta está segura.
+
+```bash
+git clone https://github.com/wezzesmeireles/riftbridge-linux.git
+cd riftbridge-linux
+./install.sh --region br
+./play.sh --region br
+```
+
+![Interface gráfica do RiftBridge](docs/assets/riftbridge-interface.png)
+
+Para a interface com botões: `./riftbridge.sh` (requer Tkinter). A instalação abre um terminal para mostrar prompts e erros.
+
+O caminho padrão usa **Nix**, que precisa estar instalado antes. Não é necessário
+usar NixOS. Nix fornece dependências, mas o Darling ainda será compilado: não é um
+instalador instantâneo nem um pacote binário pronto. Veja o
+[guia completo por distro](docs/INSTALACAO-FACIL.md).
+
+Prévia sem instalar nada:
+
+```bash
+./install.sh --dry-run
+```
+
+Build nativo, com as dependências já instaladas:
+
+```bash
+./install.sh --backend native --region br --jobs 2
+./play.sh --backend native --region br
+```
+
+**Cliente atual:** o Riot 142 introduziu incompatibilidades conhecidas. No Fedora 44
+KDE/RX 6600 desta sessão, o cliente 141.0.7.5129 restaurado chegou à tela de login,
+confirmada pelo usuário. Isso não valida uma instalação limpa, Nix ou uma partida.
+Veja [recuperação e limites](docs/INSTALACAO-FACIL.md#cliente-142-e-recuperação).
+
+A documentação e a licença originais estão preservadas abaixo.
+
+---
+
 # darling-lol
 
 > [!IMPORTANT]
@@ -78,7 +129,7 @@ See [Nix setup and operational limits](docs/SETUP.md#nixos-package).
 
 ```sh
 git clone https://github.com/lucannez64/darling-lol.git
-cd darling-lol
+cd riftbridge-linux
 python3 -m venv build/venv
 build/venv/bin/pip install -r requirements.txt
 python3 scripts/configure.py --guest-user "$USER"
