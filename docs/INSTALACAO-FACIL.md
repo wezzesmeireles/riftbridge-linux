@@ -132,10 +132,16 @@ política da Riot e não remove avisos sobre software de terceiros.
 
 ## Interface gráfica
 
-Execute `./riftbridge.sh`. O modo padrão é auto; as opções avançadas permitem escolher Nix ou native. Escolha a região e use **Instalar**,
-**Abrir Riot / LoL**, **Diagnosticar** ou **Ver comandos sem instalar**. Cada ação
-abre um terminal: a janela não simula progresso e não esconde prompts do sudo.
-A GUI não é um novo backend e não remove as limitações descritas acima.
+Execute `./riftbridge.sh`. A tela mostra a distro reconhecida, a escolha prevista pelo
+modo automático e um resumo do Darling encontrado no PATH. Escolha a região e use
+**Instalar RiftBridge** para iniciar o fluxo principal. **Abrir Riot / LoL**,
+**Diagnosticar** e **Prévia dos comandos** ficam na mesma tela; Nix/native só aparecem
+ao abrir as opções avançadas. Cada ação abre um terminal e o painel indica quando
+ela terminou. Os prompts do sudo permanecem visíveis nesse terminal.
+
+A tela de status descreve apenas o que foi detectado no sistema; não valida o driver,
+a instalação do jogo ou a compatibilidade da conta. A interface não é um novo backend
+e não remove as limitações descritas acima.
 
 Sem Tkinter, o assistente abre no terminal e prepara as dependências. Para instalar
 somente a interface: Fedora `sudo dnf install python3-tkinter`; Debian/Ubuntu
