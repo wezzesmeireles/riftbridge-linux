@@ -33,6 +33,9 @@ x86_64. A disponibilidade dos pacotes do Fedora foi consultada nesta máquina;
 Debian e Arch não tiveram instalação completa validada. O gerenciador sempre pode
 interromper por pacote indisponível ou configuração de repositórios. Não há `-y`,
 `--noconfirm`, desativação de SELinux ou execução de instaladores remotos.
+No Fedora, o assistente verifica o provedor FFmpeg já instalado: usa `ffmpeg-devel`
+quando encontra bibliotecas RPM Fusion e os pacotes `*-free-devel` do Fedora quando
+não encontra esse provedor. Assim não pede ao DNF para trocar bibliotecas de mídia.
 
 ## Caminho comum entre distros: Nix (opcional)
 

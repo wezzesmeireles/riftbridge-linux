@@ -1,5 +1,6 @@
 """Native x86_64 dependency plans; no sudo, network or mutation on import."""
 import shlex
+import subprocess
 from pathlib import Path
 
 def os_release(path='/etc/os-release'):
@@ -23,10 +24,28 @@ def family(info=None):
     if any(i in ids for i in ('arch','manjaro','endeavouros','cachyos')):return 'arch'
     return None
 
+def rpm_installed(package):
+    """Check one installed RPM without invoking a package transaction."""
+    try:
+        return subprocess.run(['rpm','-q',package],stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL,check=False).returncode == 0
+    except OSError:
+        return False
+
+def fedora_ffmpeg_packages():
+    # Fedora's codec-free development packages conflict with RPM Fusion's ffmpeg-libs.
+    # Keep the host's existing provider and request its matching headers instead.
+    if rpm_installed('ffmpeg-devel'):
+        return []
+    if rpm_installed('ffmpeg-libs'):
+        return ['ffmpeg-devel']
+    return ['libavcodec-free-devel','libavformat-free-devel','libswresample-free-devel']
+
 def commands(kind):
     # Based on Darling build instructions, omitting i686 for TARGET_i386=OFF.
     if kind=='fedora':
-        packages='make cmake clang clang-devel lld llvm llvm-devel bison flex xz fuse-devel systemd-devel elfutils-libelf-devel cairo-devel freetype-devel libjpeg-turbo-devel fontconfig-devel libglvnd-devel mesa-libGL-devel mesa-libEGL-devel mesa-libGLU-devel libtiff-devel libxml2-devel libbsd-devel git git-lfs libXcursor-devel libXrandr-devel libXext-devel libxcb-devel giflib-devel pulseaudio-libs-devel libxkbfile-devel openssl-devel libcap-devel libavcodec-free-devel libavformat-free-devel libswresample-free-devel libcurl-devel libedit-devel vulkan-headers vulkan-loader-devel vulkan-tools glx-utils xdpyinfo python3-pip python3-tkinter unzip curl pkgconf-pkg-config'.split()
+        packages='make cmake clang clang-devel lld llvm llvm-devel bison flex xz fuse-devel systemd-devel elfutils-libelf-devel cairo-devel freetype-devel libjpeg-turbo-devel fontconfig-devel libglvnd-devel mesa-libGL-devel mesa-libEGL-devel mesa-libGLU-devel libtiff-devel libxml2-devel libbsd-devel git git-lfs libXcursor-devel libXrandr-devel libXext-devel libxcb-devel giflib-devel pulseaudio-libs-devel libxkbfile-devel openssl-devel libcap-devel libcurl-devel libedit-devel vulkan-headers vulkan-loader-devel vulkan-tools glx-utils xdpyinfo python3-pip python3-tkinter unzip curl pkgconf-pkg-config'.split()
+        packages.extend(fedora_ffmpeg_packages())
         return [['sudo','dnf','install',*packages]]
     if kind=='debian':
         packages='build-essential cmake clang lld llvm-dev bison flex xz-utils libfuse-dev libudev-dev pkg-config libcap2-bin libcap-dev git git-lfs libglu1-mesa-dev libcairo2-dev libgl1-mesa-dev libtiff-dev libfreetype6-dev libxml2-dev libegl1-mesa-dev libfontconfig1-dev libbsd-dev libxrandr-dev libxcursor-dev libxext-dev libxcb-shm0-dev libx11-xcb-dev libgif-dev libpulse-dev libavformat-dev libavcodec-dev libswresample-dev libdbus-1-dev libxkbfile-dev libssl-dev libvulkan-dev libcurl4-openssl-dev libedit-dev vulkan-tools mesa-utils x11-utils python3-venv python3-pip python3-tk curl unzip'.split()
