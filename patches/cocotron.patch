@@ -2092,8 +2092,7 @@ index 50c3d59..7cedcf4 100644
 +    }
 +    return paths;
 +}
- 
--    [NSApp stopModalWithCode: NSOKButton];
++
 +/* What the Open/Save button accepts: the selected rows, or with nothing
 + * selected the directory being shown. An empty result keeps the panel up. */
 +- (NSArray *) _acceptablePaths {
@@ -2104,7 +2103,8 @@ index 50c3d59..7cedcf4 100644
 +        return @[ _directory ];
 +    return @[];
 +}
-+
+ 
+-    [NSApp stopModalWithCode: NSOKButton];
 +- (void) _setAcceptedPaths: (NSArray *) paths {
 +    [self _setFilename: [paths firstObject]];
 +}
@@ -2136,12 +2136,12 @@ index 50c3d59..7cedcf4 100644
  - (IBAction) _cancel: (id) sender {
 -    [NSApp stopModalWithCode: NSCancelButton];
 +    [self _dismissWithCode: NSCancelButton];
- }
- 
-+- (void) cancelOperation: (id) sender {
-+    [self _cancel: sender];
 +}
 +
++- (void) cancelOperation: (id) sender {
++    [self _cancel: sender];
+ }
+ 
 +// Electron (Riot Client UI) opens its file dialogs through these and waits
 +// for the handler; run the panel modally and report the result.
  - (void) beginWithCompletionHandler: (void (^)(NSModalResponse result)) handler {
@@ -3797,33 +3797,31 @@ index ad5e4f9..e0af4f3 100644
  }
  
 -@end
--
++/* Accessibility display options. Darling has no assistive-technology client,
++ * so none of these are active; the values answer the documented "off" state
++ * (and make `voiceOverEnabled` KVC-compliant for Chromium's KVO observer). */
++- (BOOL) voiceOverEnabled {
++    return NO;
++}
+ 
 -static dispatch_once_t _initOnceNsWorkspaceOpenConfig;
 -static NSWorkspaceOpenConfiguration* _singletonNsWorkspaceOpenConfig;
--
++- (BOOL) accessibilityDisplayShouldIncreaseContrast {
++    return NO;
++}
+ 
 -@implementation NSWorkspaceOpenConfiguration
 -+ (instancetype)configuration {
 -    dispatch_once(&_initOnceNsWorkspaceOpenConfig, ^{
 -        _singletonNsWorkspaceOpenConfig = [[NSWorkspaceOpenConfiguration alloc] init];
 -    });
 -    return _singletonNsWorkspaceOpenConfig;
-+/* Accessibility display options. Darling has no assistive-technology client,
-+ * so none of these are active; the values answer the documented "off" state
-+ * (and make `voiceOverEnabled` KVC-compliant for Chromium's KVO observer). */
-+- (BOOL) voiceOverEnabled {
++- (BOOL) accessibilityDisplayShouldReduceMotion {
 +    return NO;
  }
  
 -@end
 \ No newline at end of file
-+- (BOOL) accessibilityDisplayShouldIncreaseContrast {
-+    return NO;
-+}
-+
-+- (BOOL) accessibilityDisplayShouldReduceMotion {
-+    return NO;
-+}
-+
 +- (BOOL) accessibilityDisplayShouldReduceTransparency {
 +    return NO;
 +}
@@ -4418,10 +4416,7 @@ index 5ae29bf..1377c90 100644
 +    XRRScreenResources *screen = NULL;
 +    if (XRRQueryExtension(_display, &eventBase, &errorBase))
          screen = XRRGetScreenResources(_display, DefaultRootWindow(_display));
--        NSMutableArray<NSScreen *> *retval =
--                [NSMutableArray arrayWithCapacity: screen->noutput];
- 
--        Atom edidAtom = XInternAtom(_display, "EDID", FALSE);
++
 +    if (screen) {
 +        RROutput primaryOutput =
 +                XRRGetOutputPrimary(_display, DefaultRootWindow(_display));
@@ -4432,18 +4427,13 @@ index 5ae29bf..1377c90 100644
 +            return [self _rootScreenFallback];
 +        }
 +        int primary = -1;
- 
-         for (int i = 0; i < screen->noutput; i++) {
-             XRROutputInfo *oinfo =
-                     XRRGetOutputInfo(_display, screen, screen->outputs[i]);
--            NSScreen *nsscreen;
--
--            if (oinfo->crtc) {
++
++        for (int i = 0; i < screen->noutput; i++) {
++            XRROutputInfo *oinfo =
++                    XRRGetOutputInfo(_display, screen, screen->outputs[i]);
 +            if (oinfo && oinfo->crtc) {
-                 XRRCrtcInfo *crtc =
-                         XRRGetCrtcInfo(_display, screen, oinfo->crtc);
--                NSRect frame =
--                        NSMakeRect(crtc->x, crtc->y, crtc->width, crtc->height);
++                XRRCrtcInfo *crtc =
++                        XRRGetCrtcInfo(_display, screen, oinfo->crtc);
 +                if (crtc) {
 +                    rootFrames[i] =
 +                            NSMakeRect(crtc->x, crtc->y, crtc->width, crtc->height);
@@ -4466,15 +4456,22 @@ index 5ae29bf..1377c90 100644
 +
 +        // [NSScreen screens] starts with the primary screen, as on macOS.
 +        // Display IDs stay tied to the XRandR output index.
-+        NSMutableArray<NSScreen *> *retval =
-+                [NSMutableArray arrayWithCapacity: screen->noutput];
+         NSMutableArray<NSScreen *> *retval =
+                 [NSMutableArray arrayWithCapacity: screen->noutput];
 +        NSMutableArray<NSScreen *> *inactive = [NSMutableArray array];
-+
-+        Atom edidAtom = XInternAtom(_display, "EDID", FALSE);
-+
-+        for (int i = 0; i < screen->noutput; i++) {
-+            NSScreen *nsscreen;
-+
+ 
+         Atom edidAtom = XInternAtom(_display, "EDID", FALSE);
+ 
+         for (int i = 0; i < screen->noutput; i++) {
+-            XRROutputInfo *oinfo =
+-                    XRRGetOutputInfo(_display, screen, screen->outputs[i]);
+             NSScreen *nsscreen;
+ 
+-            if (oinfo->crtc) {
+-                XRRCrtcInfo *crtc =
+-                        XRRGetCrtcInfo(_display, screen, oinfo->crtc);
+-                NSRect frame =
+-                        NSMakeRect(crtc->x, crtc->y, crtc->width, crtc->height);
 +            if (!NSIsEmptyRect(rootFrames[i])) {
 +                NSRect frame = [self frameForRootRect: rootFrames[i]];
  
@@ -4553,10 +4550,6 @@ index 5ae29bf..1377c90 100644
      return &layout->layout;
  }
  
--- (NSUInteger) currentModifierFlags {
--    XkbStateRec r;
--    if (XkbGetState(_display, XkbUseCoreKbd, &r) != Success)
--        return 0;
 +/* darling-lol: the game asks for the pointer position, the pressed buttons and the modifier state about a thousand
 + * times per second. Each answer was a synchronous X round trip (XQueryPointer / XkbGetState) that puts the main thread
 + * to sleep until XWayland replies; while the mouse moves they dominated the slow frames. Reuse a reply for 1 ms, keep it
@@ -4567,8 +4560,7 @@ index 5ae29bf..1377c90 100644
 +static BOOL rclolHasGameTitle(NSString *title) {
 +    return title && [title rangeOfString:@"(TM) Client" options:NSCaseInsensitiveSearch].location != NSNotFound;
 +}
- 
--    return [self modifierFlagsForState: r.mods];
++
 +BOOL X11IsLeagueGameWindow(Display *display, Window window, NSWindow *delegate) {
 +    /* Tooltips, menus and other panels are not the game window even in the game process: a
 +     * tooltip treated as the game was made managed and EWMH fullscreen, a black screen on top. */
@@ -4646,16 +4638,18 @@ index 5ae29bf..1377c90 100644
 +    return NO;
 +}
 +
-+- (NSUInteger) currentModifierFlags {
+ - (NSUInteger) currentModifierFlags {
 +    if (rclolFresh(&rclolModsStamp)) return rclolMods;
-+    XkbStateRec r;
+     XkbStateRec r;
+-    if (XkbGetState(_display, XkbUseCoreKbd, &r) != Success)
 +    if (XkbGetState(_display, XkbUseCoreKbd, &r) != Success) {
 +        rclolModsStamp = 0;
-+        return 0;
+         return 0;
 +    }
 +    return rclolMods = [self modifierFlagsForState: r.mods];
 +}
-+
+ 
+-    return [self modifierFlagsForState: r.mods];
 +- (NSUInteger) pressedMouseButtons {
 +    if (!rclolQueryPointer(_display)) return 0;
 +    unsigned int state = rclolPointerState;
@@ -5139,11 +5133,12 @@ index 5ae29bf..1377c90 100644
      case ButtonRelease:
 -        pos = [window
 -                transformPoint: NSMakePoint(ev->xbutton.x, ev->xbutton.y)];
+-
 +        // One scroll event per notch, sent on press; releases are not clicks.
 +        if (ev->xbutton.button >= Button4 && ev->xbutton.button <= 7) break;
 +        pos = [self locationInWindow: window x: ev->xbutton.x y: ev->xbutton.y
 +                               rootX: ev->xbutton.x_root rootY: ev->xbutton.y_root];
- 
++
 +        if (ev->xbutton.button == Button2 || ev->xbutton.button >= 8) {
 +            unsigned b = ev->xbutton.button == Button2 ? 2 : ev->xbutton.button - 5;
 +            if (b < 32) _otherButtonsDown &= ~(1u << b);
@@ -5194,10 +5189,7 @@ index 5ae29bf..1377c90 100644
  
 -            CGFloat deltaX = pos.x - lastMotionPos.x;
 -            CGFloat deltaY = pos.y - lastMotionPos.y;
-+            double deltaX, deltaY;
-+            CGPoint rclolEventPos = pos, rclolLastPos = lastMotionPos;
-+            const char *rclolDecision = "absolute";
- 
+-
 -            // NSLog(@"cursorGrabbed=%d, deltaX=%f, deltaY=%f\n",
 -            // _cursorGrabbed, deltaX, deltaY);
 -            if (_cursorGrabbed) {
@@ -5216,6 +5208,10 @@ index 5ae29bf..1377c90 100644
 -                    pos.y = lastMotionPos.y;
 -                } else {
 -                    // This is an event generated by [self warpMouse:] above
++            double deltaX, deltaY;
++            CGPoint rclolEventPos = pos, rclolLastPos = lastMotionPos;
++            const char *rclolDecision = "absolute";
++
 +            if (_relativeMouse.active) {
 +                /* The cursor is disassociated (CGAssociateMouseAndMouseCursorPosition(false)): physical motion
 +                 * only produces deltas and the event reports the frozen virtual cursor. Where warps are honoured
@@ -5270,8 +5266,7 @@ index 5ae29bf..1377c90 100644
 +                rclolTraceMotion(ev, _relativeMouse.active, rclolEventPos, rclolLastPos, deltaX, deltaY, rclolDecision,
 +                                 type != NSMouseMoved || [delegate acceptsMouseMovedEvents] ||
 +                                         getenv("RCLOL_FORWARD_MOUSE_MOVED") != NULL);
- 
--            event = [NSEvent
++
 +            if (inputTrace) {
 +                static NSTimeInterval lastMotionTrace;
 +                NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
@@ -5284,7 +5279,8 @@ index 5ae29bf..1377c90 100644
 +                        getenv("RCLOL_FORWARD_MOUSE_MOVED") != NULL);
 +                }
 +            }
-+
+ 
+-            event = [NSEvent
 +            if (type != NSMouseMoved || [delegate acceptsMouseMovedEvents] ||
 +                getenv("RCLOL_FORWARD_MOUSE_MOVED")) {
 +            /* Relative motion is all in the deltas: keep those of the queued events coalesced below. */
@@ -5519,24 +5515,15 @@ index 5ae29bf..1377c90 100644
      return frame;
  }
  
--- (void) warpMouse: (NSPoint) position {
--    NSLog(@"Warp to: x=%f, y=%f\n", position.x, position.y);
--    XWarpPointer(_display, None, DefaultRootWindow(_display), 0, 0, 0, 0,
--                 position.x, position.y);
 +/* Moves the X pointer and waits for the server, so the warp's MotionNotify (if any) is already queued on return.
 + * Returns the number of queued events. Callers capture NextRequest before this method to identify the echo. */
 +- (unsigned) warpPointerToRootX: (int) x y: (int) y {
 +    XWarpPointer(_display, None, DefaultRootWindow(_display), 0, 0, 0, 0, x, y);
-     XSync(_display, False);
++    XSync(_display, False);
 +    rclolPointerStamp = 0;
 +    return (unsigned) XEventsQueued(_display, QueuedAlready);
- }
- 
--- (void) grabMouse: (BOOL) doGrab {
--    if (doGrab) {
--        NSWindow *nswin = [NSApp keyWindow];
--        if (!nswin)
--            nswin = [NSApp mainWindow];
++}
++
 +/* Window-local Cocoa location of a pointer event at (x, y) in window, root (rootX, rootY). While relative this is
 + * the virtual cursor: macOS reports the frozen cursor position, not where the physical pointer went. */
 +- (NSPoint) locationInWindow: (X11Window *) window x: (int) x y: (int) y rootX: (int) rootX rootY: (int) rootY {
@@ -5545,19 +5532,9 @@ index 5ae29bf..1377c90 100644
 +                                                   _relativeMouse.virtualY - (rootY - y))];
 +    return [window transformPoint: NSMakePoint(x, y)];
 +}
- 
--        X11Window *xwin = (X11Window *) [nswin platformWindow];
--        Window win = [xwin windowHandle];
--        // Window win = DefaultRootWindow(_display);
--        const unsigned int mask = ButtonPressMask | ButtonReleaseMask |
--                                  PointerMotionMask | FocusChangeMask;
--        int result = XGrabPointer(_display, win, False, mask, GrabModeAsync,
--                                  GrabModeAsync, None, None, CurrentTime);
--        if (result == GrabSuccess) {
--            _cursorGrabbed = YES;
--            NSLog(@"XGrabPointer() succeeded for window %lu\n", win);
++
 +// CGWarpMouseCursorPosition uses the primary screen's top-left, with y down.
-+- (void) warpMouse: (NSPoint) position {
+ - (void) warpMouse: (NSPoint) position {
 +    NSRect primary = [self _primaryRootFrame];
 +    position.x += NSMinX(primary);
 +    position.y += NSMinY(primary);
@@ -5582,19 +5559,13 @@ index 5ae29bf..1377c90 100644
 +            [self suspendRelativeMouse];
 +        return;
 +    }
-+    NSLog(@"Warp to: x=%f, y=%f\n", position.x, position.y);
+     NSLog(@"Warp to: x=%f, y=%f\n", position.x, position.y);
+-    XWarpPointer(_display, None, DefaultRootWindow(_display), 0, 0, 0, 0,
+-                 position.x, position.y);
+-    XSync(_display, False);
 +    [self warpPointerToRootX: x y: y];
 +}
- 
--            NSRect frame = [xwin transformFrame: nswin.frame];
--            // NSLog(@"Window's frame is at %f,%f, size %fx%f\n",
--            // frame.origin.x, frame.origin.y, frame.size.width,
--            // frame.size.height);
--            CGPoint ptGlobal =
--                    NSMakePoint(frame.size.width / 2.0 + frame.origin.x,
--                                frame.size.height / 2.0 + frame.origin.y);
--            CGPoint ptLocal = NSMakePoint(frame.size.width / 2.0,
--                                          frame.size.height / 2.0);
++
 +/* Confinement preserves absolute motion and edge panning. Relative mode holds
 + * its own grab and is left alone while requested. */
 +- (void) updateMouseConfinementForWindow:(X11Window *)window {
@@ -5612,9 +5583,7 @@ index 5ae29bf..1377c90 100644
 +            rclolTraceRated(&rclolConfineChannel, "skip: XGetWindowAttributes failed window=%lu", (unsigned long) win);
 +        return;
 +    }
- 
--            // NSLog(@"setting last known pos in window to x=%f, y=%f\n",
--            // ptLocal.x, ptLocal.y);
++
 +    BOOL fullscreen = NO;
 +    Atom actual; int format; unsigned long count, remaining; unsigned char *data = NULL;
 +    Atom state = XInternAtom(_display, "_NET_WM_STATE", False);
@@ -5625,12 +5594,7 @@ index 5ae29bf..1377c90 100644
 +    }
 +    if (data) XFree(data);
 +    BOOL rclolEwmhFullscreen = fullscreen;
- 
--            [xwin setLastKnownCursorPosition: [xwin transformPoint: ptLocal]];
--            [self warpMouse: ptGlobal];
--        } else {
--            NSLog(@"XGrabPointer() failed with error %d for window %lu\n",
--                  result, win);
++
 +    /* Only the window that holds keyboard focus may take the pointer. Asking the WM to activate
 +     * or focus it from here would fight the user's alt-tab: this runs on every focus, map,
 +     * configure and _NET_WM_STATE change. */
@@ -5672,7 +5636,7 @@ index 5ae29bf..1377c90 100644
 +            _confinedWindow = None;
 +            _confinedWidth = 0;
 +            _confinedHeight = 0;
-         }
++        }
 +        return;
 +    }
 +    _confinedWidth = attrs.width;
@@ -5788,17 +5752,51 @@ index 5ae29bf..1377c90 100644
 +    X11RelativeMouseEnd(&_relativeMouse);
 +    _relativeWindow = None;
 +    rclolPointerStamp = 0;
-+}
-+
+ }
+ 
 +/* CGAssociateMouseAndMouseCursorPosition(!doGrab). */
-+- (void) grabMouse: (BOOL) doGrab {
+ - (void) grabMouse: (BOOL) doGrab {
 +    BOOL rclolRelativeBefore = _relativeMouse.active;
 +    Window rclolConfinedBefore = _confinedWindow;
 +    NSWindow *rclolWindow = nil;
 +    const char *rclolPick = "keyWindow";
 +    int rclolResult = -1;
 +    if (rclolTraceOn()) rclolTraceGrabChanged();
-+    if (doGrab) {
+     if (doGrab) {
+-        NSWindow *nswin = [NSApp keyWindow];
+-        if (!nswin)
+-            nswin = [NSApp mainWindow];
+-
+-        X11Window *xwin = (X11Window *) [nswin platformWindow];
+-        Window win = [xwin windowHandle];
+-        // Window win = DefaultRootWindow(_display);
+-        const unsigned int mask = ButtonPressMask | ButtonReleaseMask |
+-                                  PointerMotionMask | FocusChangeMask;
+-        int result = XGrabPointer(_display, win, False, mask, GrabModeAsync,
+-                                  GrabModeAsync, None, None, CurrentTime);
+-        if (result == GrabSuccess) {
+-            _cursorGrabbed = YES;
+-            NSLog(@"XGrabPointer() succeeded for window %lu\n", win);
+-
+-            NSRect frame = [xwin transformFrame: nswin.frame];
+-            // NSLog(@"Window's frame is at %f,%f, size %fx%f\n",
+-            // frame.origin.x, frame.origin.y, frame.size.width,
+-            // frame.size.height);
+-            CGPoint ptGlobal =
+-                    NSMakePoint(frame.size.width / 2.0 + frame.origin.x,
+-                                frame.size.height / 2.0 + frame.origin.y);
+-            CGPoint ptLocal = NSMakePoint(frame.size.width / 2.0,
+-                                          frame.size.height / 2.0);
+-
+-            // NSLog(@"setting last known pos in window to x=%f, y=%f\n",
+-            // ptLocal.x, ptLocal.y);
+-
+-            [xwin setLastKnownCursorPosition: [xwin transformPoint: ptLocal]];
+-            [self warpMouse: ptGlobal];
+-        } else {
+-            NSLog(@"XGrabPointer() failed with error %d for window %lu\n",
+-                  result, win);
+-        }
 +        _relativeRequested = YES;
 +        rclolResult = [self beginRelativeMouseWithWindow: &rclolWindow pick: &rclolPick];
      } else {
@@ -6582,8 +6580,7 @@ index f4925b6..b565b91 100644
 -            _styleMask == NSBorderlessWindowMask ? True : False;
 -    xattr_mask = CWOverrideRedirect | CWColormap;
 -    xattr.colormap = cmap;
-+    BOOL isGame = X11IsLeagueGameWindow(_display, None, delegate);
- 
+-
 -    _window = XCreateWindow(
 -            _display, DefaultRootWindow(_display), _frame.origin.x,
 -            _frame.origin.y, _frame.size.width, _frame.size.height, 0,
@@ -6591,6 +6588,8 @@ index f4925b6..b565b91 100644
 -            InputOutput,
 -            (_visualInfo == NULL) ? CopyFromParent : _visualInfo->visual,
 -            xattr_mask, &xattr);
++    BOOL isGame = X11IsLeagueGameWindow(_display, None, delegate);
++
 +    // A borderless game is still a focusable application window. Leaving it
 +    // override-redirect makes XWayland bypass compositor keyboard activation.
 +    // Menus and nonactivating popups keep their unmanaged behavior.
@@ -6798,7 +6797,7 @@ index f4925b6..b565b91 100644
      }
 +    return NO;
 +}
- 
++
 +/* Keep the game on one opaque managed surface. Mutter's VRR frame clock
 + * follows that surface's repaint events, not an independently swapped child.
 + * _VARIABLE_REFRESH also advertises eligibility to X11 drivers that use it. */
@@ -6827,7 +6826,7 @@ index f4925b6..b565b91 100644
 +    _layerDrawableOwner = nil;
 +    [self updateLayerPresentationHints: _fullscreenRequested];
 +}
-+
+ 
 +- (void) requestFullscreen: (BOOL) fullscreen force: (BOOL) force {
 +    if (fullscreen) {
 +        unsigned long bypass = 2;
@@ -8484,18 +8483,10 @@ index edb4562..581991d 100644
  - (NSSize) convertSize: (NSSize) size toView: (NSView *) viewOrNil;
  - (NSRect) convertRect: (NSRect) rect fromView: (NSView *) viewOrNil;
 diff --git a/AppKit/include/AppKit/NSWindow.h b/AppKit/include/AppKit/NSWindow.h
-index a83c4d7..65126ab 100644
+index a83c4d7..c6e8659 100644
 --- a/AppKit/include/AppKit/NSWindow.h
 +++ b/AppKit/include/AppKit/NSWindow.h
-@@ -157,6 +157,7 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
-     NSSize _maxSize;
-     NSSize _contentMinSize;
-     NSSize _contentMaxSize;
-+    NSWindowCollectionBehavior _collectionBehavior;
- 
-     NSWindow *_parentWindow;
-     NSMutableArray<NSWindow *> *_childWindows;
-@@ -188,6 +189,16 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
+@@ -188,6 +188,16 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
      int _cursorRectsDisabled;
      int _flushDisabled;
  
@@ -8512,7 +8503,7 @@ index a83c4d7..65126ab 100644
      BOOL _isOpaque;
      BOOL _isVisible;
      BOOL _isDocumentEdited;
-@@ -217,6 +228,7 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
+@@ -217,6 +227,7 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
      BOOL _showsToolbarButton;
      BOOL _ignoresMouseEvents;
      BOOL _isMovableByWindowBackground;
@@ -8520,7 +8511,7 @@ index a83c4d7..65126ab 100644
      BOOL _allowsToolTipsWhenApplicationIsInactive;
      BOOL _defaultButtonCellKeyEquivalentDisabled;
      BOOL _autorecalculatesKeyViewLoop;
-@@ -240,6 +252,7 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
+@@ -240,6 +251,7 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
      NSMutableArray *_drawers;
      NSToolbar *_toolbar;
      NSWindowAnimationContext *_animationContext;
@@ -8528,7 +8519,7 @@ index a83c4d7..65126ab 100644
  
      NSRect _savedFrame;
      NSPoint _mouseDownLocationInWindow;
-@@ -247,6 +260,9 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
+@@ -247,6 +259,9 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
      NSUserInterfaceItemIdentifier _identifier;
  
      BOOL _isAccessible;
@@ -8538,7 +8529,7 @@ index a83c4d7..65126ab 100644
  }
  
  @property(class) BOOL allowsAutomaticWindowTabbing;
-@@ -425,6 +441,7 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
+@@ -425,6 +440,7 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
  - (NSButton *) standardWindowButton: (NSWindowButton) value;
  - (NSButtonCell *) defaultButtonCell;
  - (NSWindow *) attachedSheet;
@@ -8546,7 +8537,7 @@ index a83c4d7..65126ab 100644
  
  - (id) windowController;
  - (NSArray *) drawers;
-@@ -450,6 +467,7 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
+@@ -450,6 +466,7 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
  - (BOOL) isMainWindow;
  - (BOOL) isMiniaturized;
  - (BOOL) isMovable;
@@ -8554,7 +8545,7 @@ index a83c4d7..65126ab 100644
  - (BOOL) inLiveResize;
  - (BOOL) canBecomeKeyWindow;
  - (BOOL) canBecomeMainWindow;
-@@ -458,6 +476,30 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
+@@ -458,6 +475,30 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification;
  
  - (NSPoint) convertBaseToScreen: (NSPoint) point;
  - (NSPoint) convertScreenToBase: (NSPoint) point;
@@ -10517,17 +10508,18 @@ index 94ddabf..32f88c0 100644
                                  CFIndex count)
  {
 -    [font getAdvancements: advances forGlyphs: glyphs count: count];
+-
+-    double sum;
+-
+-    for (int i = 0; i < count; i++) {
+-        sum += advances[i].width;
 +    font = normalizedFont(font);
 +    if (!font || !glyphs || count <= 0)
 +        return 0;
 +    if (advances)
 +        [(KTFont *)font getAdvancements: advances forGlyphs: glyphs count: count];
 +    double sum = 0;
- 
--    double sum;
--
--    for (int i = 0; i < count; i++) {
--        sum += advances[i].width;
++
 +    for (CFIndex i = 0; i < count; i++) {
 +        CGSize advance;
 +        if (advances)
@@ -10685,7 +10677,8 @@ index 585cb49..c121ae6 100644
  #import <CoreText/CTFontCollection.h>
 +#import <CoreText/CTFontDescriptor.h>
 +#import <Foundation/Foundation.h>
-+
+ 
+-CTFontCollectionRef CTFontCollectionCreateFromAvailableFonts(CFDictionaryRef options)
 +/* A collection stores the descriptors it was created from and nothing else;
 + * matching runs the ordinary descriptor query for each of them. Collections are
 + * dictionaries so CFRetain/CFRelease/CFGetTypeID behave like every other Core
@@ -10694,7 +10687,9 @@ index 585cb49..c121ae6 100644
 +static const CFStringRef kCTFontCollectionOptions = CFSTR("kCTFontCollectionOptions");
 +
 +static CTFontCollectionRef CTFontCollectionCreateWithQuery(CFArrayRef queries, CFDictionaryRef options)
-+{
+ {
+-    printf("STUB %s\n", __PRETTY_FUNCTION__);
+-    return nil;
 +    CFMutableDictionaryRef collection = CFDictionaryCreateMutable(NULL, 2,
 +        &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 +    if (queries != NULL)
@@ -10702,16 +10697,11 @@ index 585cb49..c121ae6 100644
 +    if (options != NULL)
 +        CFDictionarySetValue(collection, kCTFontCollectionOptions, options);
 +    return (CTFontCollectionRef) collection;
-+}
+ }
  
- CTFontCollectionRef CTFontCollectionCreateFromAvailableFonts(CFDictionaryRef options)
- {
--    printf("STUB %s\n", __PRETTY_FUNCTION__);
--    return nil;
--}
--
 -CFArrayRef _Nullable CTFontCollectionCreateMatchingFontDescriptors(CTFontCollectionRef collection)
--{
++CTFontCollectionRef CTFontCollectionCreateFromAvailableFonts(CFDictionaryRef options)
+ {
 -    printf("STUB %s\n", __PRETTY_FUNCTION__);
 -    return nil;
 +    /* No query descriptors: matching enumerates every installed face. */
@@ -11337,18 +11327,6 @@ index 46a5bab..e2170bc 100644
  - (CGFloat) pointSize;
  - (CGFloat) fontSize;
  
-diff --git a/CoreText/stubs.c b/CoreText/stubs.c
-deleted file mode 100644
-index 1287daa..0000000
---- a/CoreText/stubs.c
-+++ /dev/null
-@@ -1,6 +0,0 @@
--#include <stdio.h>
--
--void *CTFontDescriptorCreateWithAttributes(void) {
--    printf("STUB %s\n", __PRETTY_FUNCTION__);
--    return NULL;
--}
 diff --git a/Onyx2D/O2ColorSpace.m b/Onyx2D/O2ColorSpace.m
 index d1b260c..6efc1ca 100644
 --- a/Onyx2D/O2ColorSpace.m
@@ -11411,21 +11389,23 @@ index a8bf3fa..59f3c45 100644
  
      O2Font_freetype *font = (O2Font_freetype *) gState->_font;
 -    FT_Face face = [font face];
-+    /* FT_Load_Glyph replaces the shared face glyph slot and bitmap.
-+     * Hold the same font lock used by metric queries through rasterization. */
-+    @synchronized(font) {
-+        FT_Face face = [font face];
- 
+-
 -    int i;
 -    FT_Error ftError;
-+        int i;
-+        FT_Error ftError;
- 
+-
 -    if (face == NULL) {
 -        NSLog(@"face is NULL");
 -        O2SurfaceUnlock(_surface);
 -        return;
 -    }
++    /* FT_Load_Glyph replaces the shared face glyph slot and bitmap.
++     * Hold the same font lock used by metric queries through rasterization. */
++    @synchronized(font) {
++        FT_Face face = [font face];
++
++        int i;
++        FT_Error ftError;
++
 +        if (face == NULL) {
 +            NSLog(@"face is NULL");
 +            O2SurfaceUnlock(_surface);
@@ -12668,7 +12648,6 @@ index 5dce8c5..103331a 100644
          [self assignTextureIdsToLayerTree: child];
  }
  
--- (void) renderLayer: (CALayer *) layer {
 +extern void darlingQCTiming(const char* what, double seconds);
 +
 +- (void) prepareMetalLayers: (CALayer *) layer {
@@ -12695,13 +12674,13 @@ index 5dce8c5..103331a 100644
 +    _cglWindow = shared ? shared : CGLGetWindow([_subwindow nativeWindow]);
 +    _ownsCglWindow = !shared && _cglWindow != NULL;
 +    // Update CGL's surface binding even when another context was current.
-     CGLContextMakeCurrentAndAttachToWindow(_glContext, _cglWindow);
++    CGLContextMakeCurrentAndAttachToWindow(_glContext, _cglWindow);
 +    if (previous != _glContext) CGLSetCurrentContext(previous);
 +}
 +
-+- (void) renderLayer: (CALayer *) layer {
+ - (void) renderLayer: (CALayer *) layer {
 +    CFTimeInterval renderLayerStart = CACurrentMediaTime();
-+    CGLContextMakeCurrentAndAttachToWindow(_glContext, _cglWindow);
+     CGLContextMakeCurrentAndAttachToWindow(_glContext, _cglWindow);
 +    // CAMetalLayer first makes this context current without a surface, which leaves GL_DRAW_BUFFER
 +    // at GL_NONE on NVIDIA even once the window is attached (Mesa resets it).
 +    glDrawBuffer(GL_BACK);
@@ -13015,24 +12994,24 @@ index d6f86b3..88ee7bb 100644
  		}
  
 -		if (!framebufferOnly && (type.propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {
+-			continue;
 +		const bool hostVisible = (type.propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0 && (type.propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0;
 +		if (legacy == SIZE_MAX && (framebufferOnly || hostVisible)) {
 +			legacy = i;
-+		}
-+
-+		if (!gpuOnly && !hostVisible) {
- 			continue;
  		}
  
 -		if (!framebufferOnly && (type.propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0) {
--			continue;
-+		if (firstFit == SIZE_MAX) {
-+			firstFit = i;
++		if (!gpuOnly && !hostVisible) {
+ 			continue;
  		}
  
 -		// okay, this is good enough
 -		targetIndex = i;
 -		break;
++		if (firstFit == SIZE_MAX) {
++			firstFit = i;
++		}
++
 +		// no early exit: the scan continues to find the legacy choice for the log
 +		if (targetIndex == SIZE_MAX && (!gpuOnly || (type.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0)) {
 +			targetIndex = i;
@@ -13649,10 +13628,7 @@ index dd0a127..b6916db 100644
 -    size_t imageHeight = CGImageGetHeight(image);
 -    CGBitmapInfo bitmapInfo = CGImageGetBitmapInfo(image);
 +    static const uint8_t kTransparent[4] = { 0, 0, 0, 0 };
- 
--    CGDataProviderRef provider = CGImageGetDataProvider(image);
--    CFDataRef data = CGDataProviderCopyData(provider);
--    const uint8_t *pixelBytes = CFDataGetBytePtr(data);
++
 +    size_t imageWidth = 0;
 +    size_t imageHeight = 0;
 +    CGBitmapInfo bitmapInfo = 0;
@@ -13675,7 +13651,10 @@ index dd0a127..b6916db 100644
 +        bitmapInfo = CGImageGetBitmapInfo(image);
 +        pixelBytes = CFDataGetBytePtr(data);
 +    }
-+
+ 
+-    CGDataProviderRef provider = CGImageGetDataProvider(image);
+-    CFDataRef data = CGDataProviderCopyData(provider);
+-    const uint8_t *pixelBytes = CFDataGetBytePtr(data);
 +    if (pixelBytes == NULL) {
 +        NSLog(@"LOLTEX no pixel data: image=%p provider=%p data=%p", image,
 +              provider, data);
@@ -13998,6 +13977,8 @@ index 444122c..81b0170 100644
  
 -@interface CATransformLayer : NSObject
 -@end
+-
+-@implementation CATransformLayer
 +/*
 + * darling-lol M58F35:
 + *
@@ -14015,12 +13996,7 @@ index 444122c..81b0170 100644
 + * it from CALayer therefore restores the correct behaviour for every selector
 + * that was previously swallowed by the stub.
 + */
-+
-+#import <QuartzCore/CALayer.h>
-+#import <QuartzCore/CATransformLayer.h>
  
- @implementation CATransformLayer
--
 -- (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector
 -{
 -	return [NSMethodSignature signatureWithObjCTypes: "v@:"];
@@ -14030,7 +14006,10 @@ index 444122c..81b0170 100644
 -{
 -	NSLog(@"Stub called: %@ in %@", NSStringFromSelector([anInvocation selector]), [self class]);
 -}
--
++#import <QuartzCore/CALayer.h>
++#import <QuartzCore/CATransformLayer.h>
+ 
++@implementation CATransformLayer
  @end
 diff --git a/QuartzCore/CMakeLists.txt b/QuartzCore/CMakeLists.txt
 index bc12fb7..708d3b9 100644
